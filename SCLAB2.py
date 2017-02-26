@@ -1,4 +1,6 @@
 import unittest
+from math import ceil, log
+
 # ---- ITERATIVE SOLUTION Starts ------
 
 def iter_mult (A, B):
@@ -8,8 +10,7 @@ def iter_mult (A, B):
     cols_B = len(B[0])
 
     if cols_A != rows_B:
-        print "Cannot multiply the two matrices. Incorrect dimensions."
-        return
+        return "Cannot multiply the two matrices. Incorrect dimensions."
 
     C = [[0 for row in range(cols_B)] for col in range(rows_A)]
     print C
@@ -25,133 +26,167 @@ def iter_mult (A, B):
 
 # _____ STRASSEN'S METHOD STARTS ________
 
-# n*n additions 
-
+# Some auxilliary functions
 def add(A, B):
-	n = len(A)
-	C = [[0 for j in range(n)] for i in range(n)]
-
-    for j in range(n):
-        for i in range (n):
+    n = len(A)
+    C = [[0 for j in xrange(0, n)] for i in xrange(0, n)]
+    for i in xrange(0, n):
+        for j in xrange(0, n):
             C[i][j] = A[i][j] + B[i][j]
     return C
 
-def sub(A, B):
+
+def subtract(A, B):
     n = len(A)
-    C = [[0 for j in range(n)] for i in range(n)]
-    for i in range(n):
-        for j in range(n):
+    C = [[0 for j in xrange(0, n)] for i in xrange(0, n)]
+    for i in xrange(0, n):
+        for j in xrange(0, n):
             C[i][j] = A[i][j] - B[i][j]
     return C
 
-# strassens multiplication
+# STRASSEN'S RECURSIVE STEP:
+def strassen_recur(A, B):
+    n = len(A)
+
+    if n <= RECURSION_DEPTH:
+        return iter_mult(A, B)
+    else:
+        # initializing the new sub-matrices
+        new_size = n/2
+        a11 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        a12 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        a21 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        a22 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+
+        b11 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        b12 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        b21 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        b22 = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+
+        ar = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+        br = [[0 for j in xrange(0, new_size)] for i in xrange(0, new_size)]
+
+        # dividing the matrices in 4 sub-matrices:
+        for i in xrange(0, new_size):
+            for j in xrange(0, new_size):
+                a11[i][j] = A[i][j]               # 1,1
+                a12[i][j] = A[i][j + new_size]    # 1,n
+                a21[i][j] = A[i + new_size][j]    # n,1
+                a22[i][j] = A[i + new_size][j + new_size] # n,n
+
+                b11[i][j] = B[i][j]            
+                b12[i][j] = B[i][j + new_size]    
+                b21[i][j] = B[i + new_size][j]    
+                b22[i][j] = B[i + new_size][j + new_size] 
+
+        # Calculating p's:
+
+        ar = add(a11, a22)
+        br = add(b11, b22)
+        p1 = strassen_recur(ar, br) # p1 = (a11+a22) x (b11+b22)
+
+        ar = add(a21, a22)      # a21+a22
+        p2 = strassen_recur(ar, b11)  # p2 = (a21+a22) x (b11)
+
+        br = subtract(b12, b22) # b12-b22
+        p3 = strassen_recurR(a11, br)  # p3 = (a11) x (b12 - b22)
+
+        br = subtract(b21, b11) # b21-b11
+        p4 =strassen_recur(a22, br)   # p4 = (a22) x (b21 - b11)
+
+        ar = add(a11, a12)      # a11+a12
+        p5 = strassen_recur(ar, b22)  # p5 = (a11+a12) x (b22)
+
+        ar = subtract(a21, a11) # a21-a11
+        br = add(b11, b12)      # b11 + b12
+        p6 = strassen_recur(ar, br) # p6 = (a21-a11) x (b11+b12)
+
+        ar = subtract(a12, a22) # a12-a22
+        br = add(b21, b22)      # b21 + b22
+        p7 = strassen_recur(ar, br) # p7 = (a12-a22) x (b21+b22)
+
+        # calculating c's
+        c12 = add(p3, p5) # c12 = p3 + p5
+        c21 = add(p2, p4)  # c21 = p2 + p4
+
+        ar = add(p1, p4) # p1 + p4
+        br = add(ar, p7) # p1 + p4 + p7
+        c11 = subtract(br, p5) # c11 = p1 + p4 - p5 + p7
+
+        ar = add(p1, p3) # p1 + p3
+        br = add(ar, p6) # p1 + p3 + p6
+        c22 = subtract(br, p2) # c22 = p1 + p3 - p2 + p6
+
+        # Resultant matrix:
+        C = [[0 for j in xrange(0, n)] for i in xrange(0, n)]
+        for i in xrange(0, new_size):
+            for j in xrange(0, new_size):
+                C[i][j] = c11[i][j]
+                C[i][j + new_size] = c12[i][j]
+                C[i + new_size][j] = c21[i][j]
+                C[i + new_size][j + new_size] = c22[i][j]
+        return C
+
+
 def strassens(A, B):
-	m = 0
-	n = len(A[0])
-	C = [[0 for j in range(n)] for i in range(n)]
-	if n==1:
-		C[0][0] = A[0][0]*B[0][0]
-	else:
-		m = n/2
-        A11 = [[0 for j in range(m)] for i in range(m)]
-        A12 = [[0 for j in range(m)] for i in range(m)]
-        A21 = [[0 for j in range(m)] for i in range(m)]
-        A22 = [[0 for j in range(m)] for i in range(m)]
+    # Checking dimensions and list types:
+    if (type(A) == list and type(B) == list) != 1:
+        return False
+    if (len(A) == len(A[0]) == len(B) == len(B[0])) != 1:
+        return False
 
-        B11 = [[0 for j in range(m)] for i in range(m)]
-        B12 = [[0 for j in range(m)] for i in range(m)]
-        B21 = [[0 for j in range(m)] for i in range(m)]
-        B22 = [[0 for j in range(m)] for i in range(m)]
-
-        AR = [[0 for j in range(m)] for i in range(m)]
-        BR = [[0 for j in range(m)] for i in range(m)]
-
-        # create 4 sub-matrices(top left, top right bottom letf and right:
-        for i in range(m):
-            for j in range(m):
-                A11[i][j] = A[i][j]
-                A12[i][j] = A[i][j + m]
-                A21[i][j] = A[i + m][j]    
-                A22[i][j] = A[i + m][j + m] 
-
-                B11[i][j] = B[i][j]            
-                B12[i][j] = B[i][j + m]    
-                B21[i][j] = B[i + m][j]    
-                B22[i][j] = B[i + m][j + m]
-
-            BR = sub(B12, B22) #(b12-b22)
-            p1 = strassens(A11, BR) # p1 = (a11) * (b12-b22)
-
-            AR = add(A11, A12)      # a11 + a12
-            p2 = strassens(AR, B11)  # p2 = (a21+a22) * (b11)
-
-            AR = add(A21, A22) # a21 + a22
-            p3 = strassens(B11, AR)  # p3 = (b11) * (a21 + a22)
-
-            BR = sub(B21, B11) # b21 - b11
-            p4 =strassens(A22, BR)   # p4 = (a22) * (b21 - b11)
-
-            BR =  add(B11,B22)     #b11+b22
-            AR = add(A11, A12)      # a11 + a12
-            p5 = strassens(AR, BR)  # p5 = (a11+a12) * (b11+b22)   
-
-            AR = sub(A12, A22) # a12 - a22
-            BR = add(B21, B22)      # b11 + b12
-            p6 = strassens(AR, BR) # p6 = (a21-a11) * (b11+b12)
-
-            AR = sub(A11, A21) # a12 - a21
-            BR = add(B11, B12)      # b11 + b12
-            p7 = strassens(AR, BR) # p7 = (a12-a21) * (b11+b12)
-
-        # reqrouping all the ps into c11, c22,c21,c12
-
-            AR = add(p5, p4) # p5 + p4
-            BR = add(AR, p6) # p5 + p4 + p6
-            c11 = sub(BR, p2) # c11 = p1 + p4 - p2 + p6
-
-            c12 = add(p1, p2) # c12 = p1 + p2
-            c21 = add(p3, p4)  # c21 = p3 + p4
-
-
-
-            AR = add(p5, p1) # p5 + p1
-            BR = sub(AR, p3) # p5 + p1 - p3
-            c22 = sub(BR, p7) # c22 = p5 + p1 - p3 - p7
-
-        # results 
-            C = [[0 for j in range(n)] for i in range(n)]
-            for i in range(m):
-                for j in range(m):
-                    C[i][j] = c11[i][j]
-                    C[i][j + m] = c12[i][j]
-                    C[i + m][j] = c21[i][j]
-                    C[i + m][j + m] = c22[i][j]
-            return C
+    # appending zeros
+    nextPowerOfTwo = lambda n: 2**int(ceil(log(n,2)))
+    n = len(A)
+    m = nextPowerOfTwo(n)
+    APrep = [[0 for i in xrange(m)] for j in xrange(m)]
+    BPrep = [[0 for i in xrange(m)] for j in xrange(m)]
+    for i in xrange(n):
+        for j in xrange(n):
+            APrep[i][j] = A[i][j]
+            BPrep[i][j] = B[i][j]
+    CPrep = strassen_recur(APrep, BPrep)
+    C = [[0 for i in xrange(n)] for j in xrange(n)]
+    for i in xrange(n):
+        for j in xrange(n):
+            C[i][j] = CPrep[i][j]
+    return C
 
 # ________ STRASSEN's METHOD ENDS ___________
 
+# Function to print matrix
 def print_matrix(matrix):
     for line in matrix:
         print("\t".join(map(str, line)))
+
+#____________________________________________
+
+
+# TO STOP COMPILER PANIC ON EXCEEDING RECURSION DEPTH:
+RECURSION_DEPTH = 8
 
 
 class TestMultiplicationMethods(unittest.TestCase):
 
     def test_nomult(self):
     	X = [[1,2,3],[1,2,2]]
-    	Y = [1]
-        self.assertEqual(iter_mult(X,Y), 'Cannot multiply the two matrices. Incorrect dimensions.')
+    	Y = [[1]]
+        self.assertEqual(iter_mult(X,Y),"Cannot multiply the two matrices. Incorrect dimensions.")
+        
+    def test_assertions(self):
+        X = [[1,2,3],[1,2,2]]
+        Y = [[1]]
+        self.assertFalse(strassens(X,Y))
+
+    def test_logic(self):
+        X = [[0,0,0],[0,0,0],[0,0,0]]
+        self.assertEqual(iter_mult(X,X), X)
+        self.assertEqual(strassens(X,X), X)
 
     def test_checkboth(self):
-    	X = [[1,1,1],[1,1,1]]
-    	Y = [[1,1,1],[1,1,1]]
+    	X = [[1,1,1],[1,1,1],[1,2,3]]
+    	Y = [[1,1,1],[1,1,1],[1,2,3]]
         self.assertEqual(iter_mult(X,Y), strassens(X,Y))
-
-    def test_dim(self):
-    	X = [[1,1,1],[1,1,1]]
-    	Y = [[1,1,1],[1,1,1]]
-        self.assertTrue(len(X[0]) == len(Y))
-
 
 if __name__ == '__main__':
     unittest.main()
