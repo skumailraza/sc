@@ -135,7 +135,7 @@ def strassens(A, B):
     if (len(A) == len(A[0]) == len(B) == len(B[0])) != 1:
         return False
 
-    # appending zeros
+    # preparing the matrices for strassens
     nextPowerOfTwo = lambda n: 2**int(ceil(log(n,2)))
     n = len(A)
     m = nextPowerOfTwo(n)
@@ -165,14 +165,13 @@ def print_matrix(matrix):
 # TO STOP COMPILER PANIC ON EXCEEDING RECURSION DEPTH:
 RECURSION_DEPTH = 8
 
-
 class TestMultiplicationMethods(unittest.TestCase):
 
     def test_nomult(self):
     	X = [[1,2,3],[1,2,2]]
     	Y = [[1]]
         self.assertEqual(iter_mult(X,Y),"Cannot multiply the two matrices. Incorrect dimensions.")
-        
+
     def test_assertions(self):
         X = [[1,2,3],[1,2,2]]
         Y = [[1]]
